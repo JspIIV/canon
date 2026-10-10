@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Canon — a public forecasting scoreboard on chain</title>
+<style>
+  :root{ --bg:#070a12; --card:#111726; --line:#222b40; --ink:#eef2fb; --dim:#9fb0cf; --faint:#67769a;
+    --accent:#60a5fa; --right:#4ade80; --wrong:#fb7185; --amber:#f5b301; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,sans-serif}
+  a{color:var(--accent)}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px 70px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .brand{font-weight:800;font-size:20px}.brand i{color:var(--accent);font-style:normal}
+  .net{font:12px ui-monospace,monospace;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:#192135;color:var(--ink);padding:9px 14px}
+  button.primary{background:var(--accent);color:#06142b;border-color:transparent;font-weight:700}
+  button:disabled{opacity:.5;cursor:default}
+  h1{font-size:27px;margin:26px 0 6px;letter-spacing:-.3px}
+  .lead{color:var(--dim);max-width:740px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0}
+  label{display:block;font:12px ui-monospace,monospace;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin:12px 0 5px}
+  input,textarea{width:100%;background:#0a0f1a;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:10px 11px;font:inherit}
+  textarea{min-height:56px;resize:vertical}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  .muted{color:var(--faint);font-size:13px}
+  .status{margin-top:10px;color:var(--dim);font-size:14px;min-height:18px}
+  h2{font-size:14px;color:var(--dim);font-family:ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;margin:28px 0 6px}
+  .card{border-top:1px solid var(--line);padding:16px 0}.card:first-child{border-top:0}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .claim{font-weight:700;font-size:16px}
+  .badge{display:inline-block;font:12px ui-monospace,monospace;font-weight:700;padding:3px 9px;border-radius:999px}
+  .b-pending{background:#1b2236;color:var(--amber)} .b-right{background:#13261a;color:var(--right)} .b-wrong{background:#2a1317;color:var(--wrong)}
+  .meta{color:var(--faint);font-size:12px;font-family:ui-monospace,monospace;margin-top:6px;word-break:break-all}
+  .why{color:var(--dim);font-size:13px;margin-top:8px;border-left:2px solid var(--line);padding-left:10px}
+  .lb{display:flex;flex-direction:column;gap:6px}
+  .lbrow{display:flex;justify-content:space-between;gap:10px;font-family:ui-monospace,monospace;font-size:13px;border-bottom:1px solid var(--line);padding:6px 0}
+  .lbrow b{color:var(--accent)}
+  footer{color:var(--faint);font-size:13px;border-top:1px solid var(--line);padding-top:18px;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">Canon<i>.</i> predictions graded by their own source</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span class="net">GenLayer Asimov</span>
+      <button id="connect">Connect wallet</button>
+    </div>
+  </header>
+  <div id="wstatus" class="muted" style="margin-top:10px"></div>
+
+  <h1>A public forecasting scoreboard. Commit a prediction and its source; a round grades it.</h1>
+  <p class="lead">A forecast is only worth something if it was made before the outcome and cannot be edited after. Commit
+    a claim about the future with the one public source that will settle it. It is timestamped and frozen on chain.
+    Later, anyone can ask a round of GenLayer validators to read that source and rule whether the claim came true.
+    You cannot grade your own prediction, the source decides it, and a page that only says "mark this correct" settles
+    nothing. Right and wrong accrue to your record, and the board ranks forecasters by how often they were right.</p>
+
+  <h2>Make a prediction</h2>
+  <section>
+    <label>The claim (with its timeframe)</label>
+    <input id="claim" placeholder="Acme will ship version 2.0 by the end of Q1 2026." />
+    <label>The source that will settle it (an http(s) URL)</label>
+    <input id="source" placeholder="https://acme.example/releases" />
+    <div class="actions"><button class="primary" id="make">Commit prediction</button>
+      <span class="muted">Frozen and timestamped on chain. Only the named source can grade it.</span></div>
+    <div class="status" id="pstatus"></div>
+  </section>
+
+  <h2>Leaderboard</h2>
+  <section id="board-lb"><div class="muted">Reading the board from chain…</div></section>
+
+  <h2>Predictions</h2>
+  <div class="muted" id="counts"></div>
+  <section id="board"><div class="muted">Reading the board from chain…</div></section>
+
+  <footer>
+    Contract: <a id="exp" href="#" target="_blank" rel="noopener">on the Asimov explorer</a> ·
+    <a href="https://github.com/JspIIV/canon" target="_blank" rel="noopener">source</a> ·
+    reads need no wallet; predicting and resolving are transactions on GenLayer Asimov.
+  </footer>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/genlayer-js@1.1.8";
+import { testnetAsimov } from "https://esm.sh/genlayer-js@1.1.8/chains";
+
+const CONTRACT = "0x9A25A8d4d2AbcAb38cDdb161004B20Da8674593e";
+const CHAIN_ID_HEX = "0x107d";
+const CHAIN_PARAMS = { chainId: CHAIN_ID_HEX, chainName: "GenLayer Asimov",
+  nativeCurrency:{name:"GEN",symbol:"GEN",decimals:18},
+  rpcUrls:["https://rpc-asimov.genlayer.com"], blockExplorerUrls:["https://explorer-asimov.genlayer.com"] };
+const EXPLORER = "https://explorer-asimov.genlayer.com";
+const ROUND_GAS = 8_000_000n, GAS_CAP = 95_000_000n, WALLET_COMPUTES=["nonce","type","chainId"];
+
+const reader = createClient({ chain: testnetAsimov });
+let account = null;
+const $ = id => document.getElementById(id);
+const short = a => a?`${String(a).slice(0,6)}…${String(a).slice(-4)}`:"";
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const transient = e => /revert|-32005|-32006|-32603|at capacity|gas rate|rate limit|backpressure|fetch failed|timeout|502|503|429|resource not found/i
+  .test(String(e?.details||e?.shortMessage||e?.message||e));
+$("exp").href = EXPLORER + "/address/" + CONTRACT;
+
+async function read(fn, args=[]) {
+  for (let i=1;i<=4;i++){ try { const raw = await reader.readContract({address:CONTRACT,functionName:fn,args});
+      try{return JSON.parse(raw)}catch{return raw} } catch(e){ if(!transient(e))throw e; await sleep(1500*i); } }
+}
+function walletFriendly(p){ return { ...p, request: async payload=>{
+  if(payload?.method!=="eth_sendTransaction") return p.request(payload);
+  const tx={...(payload.params?.[0]??{})}; for(const k of WALLET_COMPUTES) delete tx[k];
+  if(BigInt(tx.gas??0)<ROUND_GAS) tx.gas="0x"+ROUND_GAS.toString(16);
+  if(BigInt(tx.gas??0)>GAS_CAP) tx.gas="0x"+GAS_CAP.toString(16);
+  try{ return await p.request({method:"eth_sendTransaction",params:[tx]}); }
+  catch(err){ if(err?.code!==-32602||tx.gasPrice===undefined) throw err; const t={...tx}; delete t.gasPrice;
+    return p.request({method:"eth_sendTransaction",params:[t]}); } } }; }
+
+const injected = [];
+try{ window.addEventListener("eip6963:announceProvider", ev=>{ if(ev?.detail?.provider) injected.push(ev.detail); });
+  window.dispatchEvent(new Event("eip6963:requestProvider")); }catch{}
+function pickProvider(){
+  const mm = injected.find(d=>/metamask/i.test(d.info?.rdns||"")||/metamask/i.test(d.info?.name||""));
+  if(mm) return mm.provider;
+  const e = window.ethereum; if(!e) return null;
+  if(Array.isArray(e.providers)&&e.providers.length){ return e.providers.find(p=>p.isMetaMask) || e.providers[0]; }
+  return e;
+}
+function walletCount(){ if(injected.length) return injected.length; const e=window.ethereum; return Array.isArray(e?.providers)?e.providers.length:(e?1:0); }
+let eip1193=null;
+async function useGenLayer(){ const p=eip1193; const cur=await p.request({method:"eth_chainId"});
+  if(String(cur).toLowerCase()===CHAIN_ID_HEX) return;
+  try{ await p.request({method:"wallet_switchEthereumChain",params:[{chainId:CHAIN_ID_HEX}]}); }
+  catch(err){ if(err&&(err.code===4902||err.code===-32603)){ await p.request({method:"wallet_addEthereumChain",params:[CHAIN_PARAMS]}); return; } throw err; } }
+function client(){ return createClient({ chain: testnetAsimov, account, provider: walletFriendly(eip1193) }); }
+function wsay(msg){ const el=$("wstatus"); if(el) el.textContent=msg||""; }
+async function ensureWallet(){
+  eip1193 = pickProvider();
+  if(!eip1193) throw new Error("No wallet found in this browser. Reading needs no wallet; to predict or resolve, install MetaMask and open this page in that browser (a wallet does not inject into Claude's built-in browser).");
+  if(!account){ const a=await eip1193.request({method:"eth_requestAccounts"}); account=a&&a[0]; if(!account) throw new Error("No account was shared. Open MetaMask, unlock it, and connect this site."); $("connect").textContent=short(account); }
+  await useGenLayer();
+}
+$("connect").onclick=async ()=>{
+  const n=walletCount();
+  wsay(n>1 ? "Opening MetaMask ("+n+" wallet extensions detected; if nothing appears, click the MetaMask icon in your toolbar)…"
+           : "Opening your wallet… confirm the connection in MetaMask.");
+  const hint=setTimeout(()=>wsay("Still waiting on the wallet. Click the MetaMask icon in your browser toolbar; a request may be waiting there."), 3500);
+  try{ await ensureWallet(); clearTimeout(hint); wsay("Connected "+short(account)+" on GenLayer Asimov."); await loadBoard(); }
+  catch(e){ clearTimeout(hint); const code=e&&e.code;
+    if(code===-32002) wsay("A connection request is already open. Click the MetaMask icon in your toolbar to approve it.");
+    else if(code===4001) wsay("Connection rejected in the wallet. Click Connect wallet to try again.");
+    else wsay(e?.message||String(e)); }
+};
+
+async function sendWrite(fn, args){
+  const c=client();
+  for(let attempt=1;;attempt++){ try{ return await c.writeContract({address:CONTRACT,functionName:fn,args,value:0n}); }
+    catch(e){ if(!transient(e)||attempt>=6) throw e; await sleep(4000*attempt); } }
+}
+async function confirmChange(check, statusEl, okMsg){
+  for(let i=0;i<60;i++){ await sleep(4000);
+    let ok=false; try{ ok=await check(); }catch{}
+    if(ok){ statusEl.textContent=okMsg; await loadBoard(); return true; }
+    statusEl.textContent=`Confirming on chain… ${(i+1)*4}s (Asimov can be slow; leave this open)`;
+  }
+  statusEl.textContent="The network did not confirm in time and may be congested. It may still land; reload in a minute, otherwise try again.";
+  return false;
+}
+
+/* ---- predict ---- */
+$("make").onclick = async () => {
+  try {
+    await ensureWallet();
+    const claim=$("claim").value.trim(), source=$("source").value.trim();
+    if(claim.length<12){ $("pstatus").textContent="State the claim with its timeframe."; return; }
+    if(!/^https?:\/\//.test(source)){ $("pstatus").textContent="Give an http(s) URL for the source."; return; }
+    $("pstatus").textContent="Committing… approve it in your wallet.";
+    let before=0; try{ before=(await read("size")).total; }catch{}
+    try{ await sendWrite("predict",[claim,source]); }catch(e){}
+    $("pstatus").textContent="Submitted. Waiting for the network to confirm; this can take a minute on Asimov…";
+    const ok=await confirmChange(async ()=>((await read("size")).total>before), $("pstatus"), "Prediction committed. Resolve it once the source settles it.");
+    if(ok){ $("claim").value=""; $("source").value=""; }
+  } catch(e){ $("pstatus").textContent="Commit failed: "+(e?.shortMessage||e?.message||e); }
+};
+
+/* ---- resolve ---- */
+async function resolve(id){
+  const el=$("s-"+id);
+  try{
+    await ensureWallet();
+    if(el) el.textContent="Reading the source…";
+    const before=JSON.stringify(await read("get",[String(id)]));
+    try{ await sendWrite("resolve",[String(id)]); }catch(e){ if(el) el.textContent="Submitted; the round may take a few minutes on Asimov…"; }
+    for(let i=0;i<120;i++){ await sleep(5000);
+      const now=await read("get",[String(id)]);
+      if(el) el.textContent=`Round running… ${(i+1)*5}s`;
+      if(JSON.stringify(now)!==before){ await loadBoard(); return; } }
+    if(el) el.textContent="Still settling; reload in a minute.";
+  }catch(e){ if(el) el.textContent="Resolve failed: "+(e?.shortMessage||e?.message||e); }
+}
+
+/* ---- render ---- */
+function badge(s){ const m={PENDING:["b-pending","PENDING"],RIGHT:["b-right","RIGHT ✓"],WRONG:["b-wrong","WRONG ✗"]}[s]||["b-pending",s];
+  return `<span class="badge ${m[0]}">${esc(m[1])}</span>`; }
+function pct(r){ const t=Number(r.right)+Number(r.wrong); return t?Math.round(100*Number(r.right)/t)+"%":"—"; }
+async function loadBoard(){
+  const size = await read("size",[]).catch(()=>null);
+  if(size) $("counts").textContent = `${size.total} predictions · ${size.right} right · ${size.wrong} wrong · ${size.pending} pending`;
+  const data = await read("page",["0","40"]).catch(()=>null);
+  const items = (data && data.items) || [];
+  if(!items.length){ $("board").innerHTML='<div class="muted">No predictions yet. Make one above.</div>'; $("board-lb").innerHTML='<div class="muted">No forecasters yet.</div>'; return; }
+  const addrs=new Set(); for(const w of items) addrs.add(w.forecaster);
+  const recs=[]; for(const a of addrs){ try{ const r=await read("record",[a]); recs.push({a,...r}); }catch{} }
+  recs.sort((x,y)=> (y.right-x.right) || (x.wrong-y.wrong) || (y.predictions-x.predictions));
+  $("board-lb").innerHTML='<div class="lb">'+recs.slice(0,8).map((r,i)=>`<div class="lbrow"><span>${i+1}. ${esc(short(r.a))}</span><span><b>${esc(r.right)} right</b> · ${esc(r.wrong)} wrong · ${pct(r)} <span class="muted">(${esc(r.predictions)} made)</span></span></div>`).join('')+'</div>';
+  $("board").innerHTML = items.map(w=>{
+    const open = w.status==="PENDING";
+    return `<div class="card">
+      <div class="row">${badge(w.status)}<span class="claim">${esc(w.claim)}</span></div>
+      <div class="meta">by ${esc(short(w.forecaster))} · made ${esc((w.made_at||"").slice(0,10))} · source <a href="${esc(w.source)}" target="_blank" rel="noopener">${esc((w.source||"").replace(/^https?:\/\//,"").slice(0,40))}</a> · #${esc(w.id)}</div>
+      ${w.status!=="PENDING"&&w.reason?`<div class="why"><b>${w.status==="RIGHT"?"RIGHT":"WRONG"}</b> — ${esc(w.reason)}${w.quote?`<br><span class="muted">“${esc(w.quote)}”</span>`:""}</div>`:""}
+      ${open?`<div class="actions"><button data-res="${esc(w.id)}" class="resbtn primary">Resolve from the source</button></div>`:""}
+      <div class="status" id="s-${esc(w.id)}"></div>
+    </div>`; }).join("");
+  document.querySelectorAll(".resbtn").forEach(b=>b.onclick=()=>resolve(b.getAttribute("data-res")));
+}
+loadBoard();
+</script>
+</body>
+</html>

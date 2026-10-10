@@ -1,0 +1,4 @@
+Acme release notes archive.
+
+Version 2.0 shipped on 15 March 2026, within the first quarter. The 2.0 release
+delivered the rewritten sync engine and the new API, on schedule for Q1.

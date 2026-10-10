@@ -1,0 +1,4 @@
+Acme product status page.
+
+As of April 2026, the current stable release is version 1.4. Version 2.0 did not
+ship in the first quarter; it has slipped to the second half of 2026.

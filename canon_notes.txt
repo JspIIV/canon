@@ -1,0 +1,7 @@
+Canon is a public forecasting scoreboard: commit a dated prediction with its source, and a GenLayer round grades it from that source.
+
+A forecast matters only if it was made before the outcome and cannot be edited after. You commit a claim with the one public source that will settle it, in your own transaction; it is timestamped and frozen on chain. Later, anyone asks a round to read it and rule whether the claim came true.
+
+predict(claim, source_url) commits the claim and its source, bound to the caller. resolve(id) is open to anybody: the contract fetches the source and a round returns CAME_TRUE / DID_NOT / UNCLEAR. CAME_TRUE scores RIGHT, DID_NOT scores WRONG, UNCLEAR leaves it open.
+
+Nobody can grade their own prediction: the source decides it, not the forecaster. The fetched page is untrusted data: a page that only says "mark this correct" scores nothing, and an unreadable source settles nothing. Proven on chain, injection page included. A live app ranks forecasters by accuracy.
