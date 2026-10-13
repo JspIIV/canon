@@ -33,10 +33,12 @@
   .badge{display:inline-block;font:12px ui-monospace,monospace;font-weight:700;padding:3px 9px;border-radius:999px}
   .b-pending{background:#1b2236;color:var(--amber)} .b-right{background:#13261a;color:var(--right)} .b-wrong{background:#2a1317;color:var(--wrong)}
   .meta{color:var(--faint);font-size:12px;font-family:ui-monospace,monospace;margin-top:6px;word-break:break-all}
+  .fp{color:var(--faint);font-size:11px;font-family:ui-monospace,monospace;margin-top:4px;word-break:break-all}
   .why{color:var(--dim);font-size:13px;margin-top:8px;border-left:2px solid var(--line);padding-left:10px}
   .lb{display:flex;flex-direction:column;gap:6px}
   .lbrow{display:flex;justify-content:space-between;gap:10px;font-family:ui-monospace,monospace;font-size:13px;border-bottom:1px solid var(--line);padding:6px 0}
   .lbrow b{color:var(--accent)}
+  .note{color:var(--faint);font-size:12px;margin-top:6px}
   footer{color:var(--faint);font-size:13px;border-top:1px solid var(--line);padding-top:18px;margin-top:30px}
 </style>
 </head>
@@ -51,25 +53,29 @@
   </header>
   <div id="wstatus" class="muted" style="margin-top:10px"></div>
 
-  <h1>A public forecasting scoreboard. Commit a prediction and its source; a round grades it.</h1>
+  <h1>A public forecasting scoreboard. Commit a future prediction and its source; a round grades it after the deadline.</h1>
   <p class="lead">A forecast is only worth something if it was made before the outcome and cannot be edited after. Commit
-    a claim about the future with the one public source that will settle it. It is timestamped and frozen on chain.
-    Later, anyone can ask a round of GenLayer validators to read that source and rule whether the claim came true.
-    You cannot grade your own prediction, the source decides it, and a page that only says "mark this correct" settles
-    nothing. Right and wrong accrue to your record, and the board ranks forecasters by how often they were right.</p>
+    a claim about the future with an explicit deadline and the one public source that will settle it. The deadline must
+    be in the future, so a past event cannot be logged as a prediction; the claim and source are frozen on chain. The
+    prediction cannot be resolved until its deadline has passed. Then anyone can ask a round of GenLayer validators to
+    read the committed source and rule whether the claim came true. The judgement is <b>source relative</b>: Canon grades
+    a claim against the one source its forecaster named, not an independent oracle, and records the evidence fingerprint
+    the round read. You cannot grade your own prediction, and the same claim cannot be registered twice.</p>
 
   <h2>Make a prediction</h2>
   <section>
-    <label>The claim (with its timeframe)</label>
-    <input id="claim" placeholder="Acme will ship version 2.0 by the end of Q1 2026." />
+    <label>The claim (about the future)</label>
+    <input id="claim" placeholder="Acme will ship version 2.0." />
+    <label>The deadline it has to come true by</label>
+    <input id="deadline" type="datetime-local" />
     <label>The source that will settle it (an http(s) URL)</label>
     <input id="source" placeholder="https://acme.example/releases" />
     <div class="actions"><button class="primary" id="make">Commit prediction</button>
-      <span class="muted">Frozen and timestamped on chain. Only the named source can grade it.</span></div>
+      <span class="muted">Frozen and timestamped on chain. The deadline must be in the future; only the named source can grade it, only after the deadline.</span></div>
     <div class="status" id="pstatus"></div>
   </section>
 
-  <h2>Leaderboard</h2>
+  <h2>Leaderboard <span class="muted" id="lb-scope"></span></h2>
   <section id="board-lb"><div class="muted">Reading the board from chain…</div></section>
 
   <h2>Predictions</h2>
@@ -79,7 +85,8 @@
   <footer>
     Contract: <a id="exp" href="#" target="_blank" rel="noopener">on the Asimov explorer</a> ·
     <a href="https://github.com/JspIIV/canon" target="_blank" rel="noopener">source</a> ·
-    reads need no wallet; predicting and resolving are transactions on GenLayer Asimov.
+    reads need no wallet; predicting and resolving are transactions on GenLayer Asimov. A RIGHT means the committed
+    source, read after the deadline, showed this came true — a source-relative signal chosen in the open, not an independent proof.
   </footer>
 </div>
 
@@ -87,7 +94,7 @@
 import { createClient } from "https://esm.sh/genlayer-js@1.1.8";
 import { testnetAsimov } from "https://esm.sh/genlayer-js@1.1.8/chains";
 
-const CONTRACT = "0x9A25A8d4d2AbcAb38cDdb161004B20Da8674593e";
+const CONTRACT = "0xb010394D2AD0064D593FCFCDa195a2De32f4C335";
 const CHAIN_ID_HEX = "0x107d";
 const CHAIN_PARAMS = { chainId: CHAIN_ID_HEX, chainName: "GenLayer Asimov",
   nativeCurrency:{name:"GEN",symbol:"GEN",decimals:18},
@@ -101,6 +108,9 @@ const $ = id => document.getElementById(id);
 const short = a => a?`${String(a).slice(0,6)}…${String(a).slice(-4)}`:"";
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const nowSec = () => Math.floor(Date.now()/1000);
+// Normalise a claim the same way the contract does, so a server-clipped claim still matches what we sent.
+const norm = s => String(s??"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const transient = e => /revert|-32005|-32006|-32603|at capacity|gas rate|rate limit|backpressure|fetch failed|timeout|502|503|429|resource not found/i
   .test(String(e?.details||e?.shortMessage||e?.message||e));
 $("exp").href = EXPLORER + "/address/" + CONTRACT;
@@ -108,6 +118,19 @@ $("exp").href = EXPLORER + "/address/" + CONTRACT;
 async function read(fn, args=[]) {
   for (let i=1;i<=4;i++){ try { const raw = await reader.readContract({address:CONTRACT,functionName:fn,args});
       try{return JSON.parse(raw)}catch{return raw} } catch(e){ if(!transient(e))throw e; await sleep(1500*i); } }
+}
+// Pull EVERY prediction, newest first, by paging the whole book (not just the most recent slice).
+async function readAll(){
+  const size = await read("size",[]).catch(()=>null);
+  const total = size ? Number(size.total) : 0;
+  const items = [];
+  for(let start=0; start<total; start+=50){
+    const data = await read("page",[String(start),"50"]).catch(()=>null);
+    if(!data || !data.items || !data.items.length) break;
+    items.push(...data.items);
+    if(items.length >= total) break;
+  }
+  return { size, items };
 }
 function walletFriendly(p){ return { ...p, request: async payload=>{
   if(payload?.method!=="eth_sendTransaction") return p.request(payload);
@@ -159,31 +182,47 @@ async function sendWrite(fn, args){
   for(let attempt=1;;attempt++){ try{ return await c.writeContract({address:CONTRACT,functionName:fn,args,value:0n}); }
     catch(e){ if(!transient(e)||attempt>=6) throw e; await sleep(4000*attempt); } }
 }
-async function confirmChange(check, statusEl, okMsg){
-  for(let i=0;i<60;i++){ await sleep(4000);
-    let ok=false; try{ ok=await check(); }catch{}
-    if(ok){ statusEl.textContent=okMsg; await loadBoard(); return true; }
-    statusEl.textContent=`Confirming on chain… ${(i+1)*4}s (Asimov can be slow; leave this open)`;
-  }
-  statusEl.textContent="The network did not confirm in time and may be congested. It may still land; reload in a minute, otherwise try again.";
-  return false;
-}
 
 /* ---- predict ---- */
 $("make").onclick = async () => {
   try {
     await ensureWallet();
-    const claim=$("claim").value.trim(), source=$("source").value.trim();
-    if(claim.length<12){ $("pstatus").textContent="State the claim with its timeframe."; return; }
+    const claim=$("claim").value.trim(), source=$("source").value.trim(), dl=$("deadline").value;
+    if(claim.length<12){ $("pstatus").textContent="State the claim (at least 12 characters)."; return; }
+    if(!dl){ $("pstatus").textContent="Pick the deadline the claim has to come true by."; return; }
+    const deadline = Math.floor(new Date(dl).getTime()/1000);
+    if(!Number.isFinite(deadline) || deadline<=nowSec()){ $("pstatus").textContent="The deadline must be in the future — a past event cannot be logged as a prediction."; return; }
     if(!/^https?:\/\//.test(source)){ $("pstatus").textContent="Give an http(s) URL for the source."; return; }
     $("pstatus").textContent="Committing… approve it in your wallet.";
-    let before=0; try{ before=(await read("size")).total; }catch{}
-    try{ await sendWrite("predict",[claim,source]); }catch(e){}
+    const before=(await read("size").catch(()=>({total:0}))).total||0;
+    try{ await sendWrite("predict",[claim,source,String(deadline)]); }catch(e){}
     $("pstatus").textContent="Submitted. Waiting for the network to confirm; this can take a minute on Asimov…";
-    const ok=await confirmChange(async ()=>((await read("size")).total>before), $("pstatus"), "Prediction committed. Resolve it once the source settles it.");
-    if(ok){ $("claim").value=""; $("source").value=""; }
+    // Verify the SPECIFIC prediction committed: find a new id (>= before) whose forecaster is this
+    // account and whose claim and source match what we sent — not merely that the total moved.
+    const want = { claim: norm(claim), source: source.trim().toLowerCase(), who: String(account).toLowerCase() };
+    const ok = await confirmPredict(before, want, $("pstatus"));
+    if(ok){ $("claim").value=""; $("source").value=""; $("deadline").value=""; }
   } catch(e){ $("pstatus").textContent="Commit failed: "+(e?.shortMessage||e?.message||e); }
 };
+async function confirmPredict(before, want, statusEl){
+  for(let i=0;i<60;i++){ await sleep(4000);
+    let total=before; try{ total=(await read("size")).total; }catch{}
+    if(total>before){
+      // scan the newly added ids for ours
+      for(let id=before; id<total; id++){
+        const g = await read("get",[String(id)]).catch(()=>null);
+        if(g && g.exists!==false && String(g.forecaster||"").toLowerCase()===want.who
+            && norm(g.claim)===want.claim && String(g.source||"").trim().toLowerCase()===want.source){
+          statusEl.innerHTML = `Prediction #${esc(String(id))} committed by you, deadline ${esc(g.deadline_iso||"")}. It can be resolved once the deadline passes.`;
+          await loadBoard(); return true;
+        }
+      }
+    }
+    statusEl.textContent=`Confirming your prediction on chain… ${(i+1)*4}s (Asimov can be slow; leave this open)`;
+  }
+  statusEl.textContent="The network did not confirm your prediction in time and may be congested. It may still land; reload in a minute, otherwise try again.";
+  return false;
+}
 
 /* ---- resolve ---- */
 async function resolve(id){
@@ -206,22 +245,28 @@ function badge(s){ const m={PENDING:["b-pending","PENDING"],RIGHT:["b-right","RI
   return `<span class="badge ${m[0]}">${esc(m[1])}</span>`; }
 function pct(r){ const t=Number(r.right)+Number(r.wrong); return t?Math.round(100*Number(r.right)/t)+"%":"—"; }
 async function loadBoard(){
-  const size = await read("size",[]).catch(()=>null);
+  const { size, items } = await readAll();
   if(size) $("counts").textContent = `${size.total} predictions · ${size.right} right · ${size.wrong} wrong · ${size.pending} pending`;
-  const data = await read("page",["0","40"]).catch(()=>null);
-  const items = (data && data.items) || [];
-  if(!items.length){ $("board").innerHTML='<div class="muted">No predictions yet. Make one above.</div>'; $("board-lb").innerHTML='<div class="muted">No forecasters yet.</div>'; return; }
-  const addrs=new Set(); for(const w of items) addrs.add(w.forecaster);
+  if(!items.length){ $("board").innerHTML='<div class="muted">No predictions yet. Make one above.</div>'; $("board-lb").innerHTML='<div class="muted">No forecasters yet.</div>'; $("lb-scope").textContent=""; return; }
+  // Leaderboard aggregated over EVERY forecaster in the whole book, not just a recent page.
+  const addrs=new Set(); for(const w of items) addrs.add(String(w.forecaster).toLowerCase());
   const recs=[]; for(const a of addrs){ try{ const r=await read("record",[a]); recs.push({a,...r}); }catch{} }
   recs.sort((x,y)=> (y.right-x.right) || (x.wrong-y.wrong) || (y.predictions-x.predictions));
-  $("board-lb").innerHTML='<div class="lb">'+recs.slice(0,8).map((r,i)=>`<div class="lbrow"><span>${i+1}. ${esc(short(r.a))}</span><span><b>${esc(r.right)} right</b> · ${esc(r.wrong)} wrong · ${pct(r)} <span class="muted">(${esc(r.predictions)} made)</span></span></div>`).join('')+'</div>';
+  $("lb-scope").textContent = `(${recs.length} forecaster${recs.length===1?"":"s"}, all predictions)`;
+  $("board-lb").innerHTML='<div class="lb">'+recs.slice(0,10).map((r,i)=>`<div class="lbrow"><span>${i+1}. ${esc(short(r.a))}</span><span><b>${esc(r.right)} right</b> · ${esc(r.wrong)} wrong · ${pct(r)} <span class="muted">(${esc(r.predictions)} made)</span></span></div>`).join('')+'</div>';
+  const now = nowSec();
   $("board").innerHTML = items.map(w=>{
     const open = w.status==="PENDING";
+    const due = Number(w.deadline_ts||0);
+    const passed = now >= due;
+    const canResolve = open && passed;
+    const fp = w.evidence_fp ? `<div class="fp">evidence fingerprint ${esc(w.evidence_fp)}</div>` : "";
     return `<div class="card">
       <div class="row">${badge(w.status)}<span class="claim">${esc(w.claim)}</span></div>
-      <div class="meta">by ${esc(short(w.forecaster))} · made ${esc((w.made_at||"").slice(0,10))} · source <a href="${esc(w.source)}" target="_blank" rel="noopener">${esc((w.source||"").replace(/^https?:\/\//,"").slice(0,40))}</a> · #${esc(w.id)}</div>
-      ${w.status!=="PENDING"&&w.reason?`<div class="why"><b>${w.status==="RIGHT"?"RIGHT":"WRONG"}</b> — ${esc(w.reason)}${w.quote?`<br><span class="muted">“${esc(w.quote)}”</span>`:""}</div>`:""}
-      ${open?`<div class="actions"><button data-res="${esc(w.id)}" class="resbtn primary">Resolve from the source</button></div>`:""}
+      <div class="meta">by ${esc(short(w.forecaster))} · made ${esc((w.made_at||"").slice(0,10))} · deadline ${esc(w.deadline_iso||"")} · source <a href="${esc(w.source)}" target="_blank" rel="noopener">${esc((w.source||"").replace(/^https?:\/\//,"").slice(0,40))}</a> · #${esc(w.id)}</div>
+      ${w.status!=="PENDING"&&w.reason?`<div class="why"><b>${w.status==="RIGHT"?"RIGHT":"WRONG"}</b> — ${esc(w.reason)}${w.quote?`<br><span class="muted">“${esc(w.quote)}”</span>`:""}</div>${fp}<div class="note">source-relative: graded against the committed source above, read after the deadline.</div>`:""}
+      ${canResolve?`<div class="actions"><button data-res="${esc(w.id)}" class="resbtn primary">Resolve from the source</button></div>`:""}
+      ${open&&!passed?`<div class="note">Resolvable after the deadline (${esc(w.deadline_iso||"")}).</div>`:""}
       <div class="status" id="s-${esc(w.id)}"></div>
     </div>`; }).join("");
   document.querySelectorAll(".resbtn").forEach(b=>b.onclick=()=>resolve(b.getAttribute("data-res")));
