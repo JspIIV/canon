@@ -1,0 +1,21 @@
+What did you change?
+
+Thank you for the review. The central point — that Canon must reward genuine prospective forecasting, not retrospective knowledge or agreement with a forecaster-picked source — is now enforced in the contract, not just described. Redeployed to 0xb010394D2AD0064D593FCFCDa195a2De32f4C335; repo and live app updated.
+
+1. Genuine future predictions are enforced. predict() now takes an explicit deadline (unix timestamp) and refuses it unless the deadline is in the future. A known past outcome can no longer be logged as a "prediction". The claim, source and deadline are frozen on chain at commit time.
+
+2. Premature resolution is refused. resolve() reads the on-chain clock and refuses while now < deadline, so nothing is graded while the event could still occur. A prediction can only be settled after its own deadline has passed.
+
+3. Source authenticity is clearly labelled as source-relative. The contract docstring, the predict() return, the README and every settled card in the app state plainly that a RIGHT means "the committed source, read after the deadline, showed this came true" — a source-relative signal chosen in the open before the outcome, not an independent proof. The committed source is frozen so anyone can check it.
+
+4. Reputation farming is prevented. The same forecaster cannot register the same claim twice: predict() keys a normalised claim (case- and punctuation-insensitive) against the forecaster and refuses duplicates, so a record cannot be inflated by repeating a known outcome. A different forecaster may still make the same claim.
+
+5. Evidence integrity is preserved. Each resolution records an evidence fingerprint (sha256 prefix) of the exact page the round read, surfaced in status()/get() and on the app, so an adjudication can be audited. The fingerprint is informational and is explicitly excluded from the equivalence principle, since two validators will not fetch byte-identical copies.
+
+6. Bounded-log wording corrected. The history is a bounded rolling log of the most recent MAX_LOG resolution attempts; the exact resolution count is always preserved separately. The docstrings, README and notes now say exactly this (no "append-only").
+
+7. Frontend transaction verification corrected. After committing, the app no longer trusts that the total count moved. It scans the newly added ids and confirms the specific prediction whose forecaster is the connected account and whose claim and source match what was sent, before reporting success.
+
+8. Leaderboard coverage corrected. The leaderboard is built over every forecaster in the whole book: the app pages the entire set of predictions (page(start,count) until exhausted) and aggregates records across all of them, not just a recent slice.
+
+9. Adversarial and future-dated coverage expanded. tests/canon_rules.py (28 checks) drives a controllable clock and proves: a past or present deadline is refused; a duplicate claim (including normalised) is refused; resolution before the deadline is refused; CAME_TRUE/DID_NOT score only after the deadline; the evidence fingerprint is recorded; an unreadable/conflicting/malformed/instruction-only source never scores. scripts/prove.mjs proves the same end to end on Asimov with genuine future-dated predictions: committed with a short future deadline and resolved only after it, with a past-dated predict refused, a duplicate refused, a premature resolve refused, an injection source scoring nothing, and a settled prediction not re-gradable. results/proved.json holds the run.

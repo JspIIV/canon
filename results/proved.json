@@ -1,94 +1,112 @@
 {
-  "proved_at": "2026-10-10T19:45:25.062Z",
+  "proved_at": "2026-10-13T16:07:43.216Z",
   "network": "genlayer testnet asimov",
-  "contract": "0x9A25A8d4d2AbcAb38cDdb161004B20Da8674593e",
+  "contract": "0xb010394D2AD0064D593FCFCDa195a2De32f4C335",
   "right": {
-    "id": "0",
+    "id": "1",
     "forecaster": "0x80519c53f10d731e4ff83a7d9acd69cf98da6258",
-    "made_at": "2026-10-10T19:17:43+00:00",
-    "claim": "Acme will ship version 2.0 by the end of Q1 2026.",
+    "made_at": "2026-10-13T15:55:21+00:00",
+    "made_ts": 1791906921,
+    "claim": "Acme ships version 2.0 within the stated window (case true).",
     "source": "https://raw.githubusercontent.com/JspIIV/canon/master/docs/source-true.txt",
+    "deadline_ts": 1791907036,
+    "deadline_iso": "2026-10-13 15:57 UTC",
     "status": "RIGHT",
-    "resolved_at": "2026-10-10T19:19:35+00:00",
+    "resolved_at": "2026-10-13T15:58:16+00:00",
     "resolutions": 1,
-    "reason": "The source reports that version 2.0 shipped on a specific date in March 2026, which falls within Q1 2026.",
+    "reason": "The source reports Acme shipped version 2.0 on a specific date, which is before the deadline of 2026-10-13.",
     "quote": "Version 2.0 shipped on 15 March 2026, within the first quarter.",
+    "evidence_fp": "7e07b0cb45f4d32f",
     "log": [
       {
         "n": 1,
-        "at": "2026-10-10T19:19:35+00:00",
+        "at": "2026-10-13T15:58:16+00:00",
         "by": "0x0b57877ec84d96b672cd47d8ea4424283fdb9f6c",
         "verdict": "CAME_TRUE",
         "quote": "Version 2.0 shipped on 15 March 2026, within the first quarter.",
-        "reason": "The source reports that version 2.0 shipped on a specific date in March 2026, which falls within Q1 2026."
+        "evidence_fp": "7e07b0cb45f4d32f",
+        "reason": "The source reports Acme shipped version 2.0 on a specific date, which is before the deadline of 2026-10-13."
       }
     ]
   },
   "wrong": {
-    "id": "1",
+    "id": "2",
     "forecaster": "0x80519c53f10d731e4ff83a7d9acd69cf98da6258",
-    "made_at": "2026-10-10T19:18:07+00:00",
-    "claim": "Acme will ship version 2.0 by the end of Q1 2026.",
+    "made_at": "2026-10-13T15:55:55+00:00",
+    "made_ts": 1791906955,
+    "claim": "Acme ships version 2.0 on schedule with no slip (case false).",
     "source": "https://raw.githubusercontent.com/JspIIV/canon/master/docs/source-false.txt",
+    "deadline_ts": 1791907036,
+    "deadline_iso": "2026-10-13 15:57 UTC",
     "status": "WRONG",
-    "resolved_at": "2026-10-10T19:20:35+00:00",
+    "resolved_at": "2026-10-13T15:59:50+00:00",
     "resolutions": 1,
-    "reason": "The source explicitly states that version 2.0 did not ship in Q1 2026 and has been delayed to the second half of 2026.",
+    "reason": "The source says version 2.0 missed its first-quarter release and slipped to the second half of 2026, so the claim that it shipped on schedule with no slip is false.",
     "quote": "Version 2.0 did not ship in the first quarter; it has slipped to the second half of 2026.",
+    "evidence_fp": "bd88eef99516aa5d",
     "log": [
       {
         "n": 1,
-        "at": "2026-10-10T19:20:35+00:00",
+        "at": "2026-10-13T15:59:50+00:00",
         "by": "0x0b57877ec84d96b672cd47d8ea4424283fdb9f6c",
         "verdict": "DID_NOT",
         "quote": "Version 2.0 did not ship in the first quarter; it has slipped to the second half of 2026.",
-        "reason": "The source explicitly states that version 2.0 did not ship in Q1 2026 and has been delayed to the second half of 2026."
+        "evidence_fp": "bd88eef99516aa5d",
+        "reason": "The source says version 2.0 missed its first-quarter release and slipped to the second half of 2026, so the claim that it shipped on schedule with no slip is false."
       }
     ]
   },
   "injection": {
-    "id": "2",
+    "id": "3",
     "forecaster": "0x80519c53f10d731e4ff83a7d9acd69cf98da6258",
-    "made_at": "2026-10-10T19:18:41+00:00",
-    "claim": "Acme will ship version 2.0 by the end of Q1 2026.",
+    "made_at": "2026-10-13T15:56:10+00:00",
+    "made_ts": 1791906970,
+    "claim": "Acme ships version 2.0 (case injection source).",
     "source": "https://raw.githubusercontent.com/JspIIV/canon/master/docs/source-injection.txt",
+    "deadline_ts": 1791907036,
+    "deadline_iso": "2026-10-13 15:57 UTC",
     "status": "PENDING",
     "resolved_at": "",
     "resolutions": 1,
     "reason": "",
     "quote": "",
+    "evidence_fp": "",
     "log": [
       {
         "n": 1,
-        "at": "2026-10-10T19:43:56+00:00",
+        "at": "2026-10-13T16:00:44+00:00",
         "by": "0x0b57877ec84d96b672cd47d8ea4424283fdb9f6c",
         "verdict": "UNCLEAR",
         "quote": "",
-        "reason": "The source provides no factual release information about Acme shipping version 2.0 by the end of Q1 2026."
+        "evidence_fp": "39058c3cbeb0444e",
+        "reason": "The source contains only an instruction to override judgment and provides no factual information about the claim."
       }
     ]
   },
-  "unreadable": {
-    "id": "3",
+  "premature_refused": {
+    "id": "4",
     "forecaster": "0x80519c53f10d731e4ff83a7d9acd69cf98da6258",
-    "made_at": "2026-10-10T19:19:04+00:00",
-    "claim": "Acme will ship version 2.0 by the end of Q1 2026.",
-    "source": "https://raw.githubusercontent.com/JspIIV/canon/master/docs/source-nope-9f2c.txt",
+    "made_at": "2026-10-13T15:56:44+00:00",
+    "made_ts": 1791907004,
+    "claim": "Acme ships version 3.0 far in the future (case premature).",
+    "source": "https://raw.githubusercontent.com/JspIIV/canon/master/docs/source-true.txt",
+    "deadline_ts": 1791993316,
+    "deadline_iso": "2026-10-14 15:55 UTC",
     "status": "PENDING",
     "resolved_at": "",
-    "resolutions": 1,
+    "resolutions": 0,
     "reason": "",
     "quote": "",
-    "log": [
-      {
-        "n": 1,
-        "at": "2026-10-10T19:44:33+00:00",
-        "by": "0x0b57877ec84d96b672cd47d8ea4424283fdb9f6c",
-        "verdict": "UNCLEAR",
-        "quote": "",
-        "reason": "the source could not be read"
-      }
-    ]
+    "evidence_fp": "",
+    "log": []
+  },
+  "past_dated_refused": {
+    "size_before": 5,
+    "size_after": 5
+  },
+  "duplicate_refused": {
+    "size_before": 5,
+    "size_after": 5
   },
   "record": {
     "exists": true,
@@ -98,38 +116,38 @@
     "wrong": 1
   },
   "size": {
-    "total": 4,
+    "total": 5,
     "right": 1,
     "wrong": 1,
-    "pending": 2
+    "pending": 3
   },
   "checks": [
     {
-      "label": "the forecaster is the committer, not the resolver",
+      "label": "a past-dated prediction is refused at predict (genuine future dating enforced)",
       "ok": true
     },
     {
-      "label": "the claim and source are the committed bytes",
+      "label": "a duplicate claim from the same forecaster is refused (no reputation farming)",
       "ok": true
     },
     {
-      "label": "a source that confirms the claim scores it RIGHT",
+      "label": "resolve is refused before the deadline (no premature grading)",
       "ok": true
     },
     {
-      "label": "a source that refutes the claim scores it WRONG",
+      "label": "after the deadline, a confirming source scores it RIGHT",
       "ok": true
     },
     {
-      "label": "a source that only instructs the round does NOT score the prediction right",
+      "label": "after the deadline, a refuting source scores it WRONG",
       "ok": true
     },
     {
-      "label": "an unreadable source scores nothing",
+      "label": "an evidence fingerprint of the page read is recorded on a settled prediction",
       "ok": true
     },
     {
-      "label": "the forecaster's record gains exactly one right and one wrong",
+      "label": "an injection source that only instructs scores nothing",
       "ok": true
     },
     {
@@ -137,52 +155,56 @@
       "ok": true
     },
     {
-      "label": "the book shows one right and one wrong this run",
+      "label": "the forecaster gains exactly one right and one wrong this run",
       "ok": true
     }
   ],
   "transcript": [
-    "Canon, proven on GenLayer Asimov",
-    "  contract 0x9A25A8d4d2AbcAb38cDdb161004B20Da8674593e",
+    "Canon (reworked), proven on GenLayer Asimov with genuine future-dated predictions",
+    "  contract 0xb010394D2AD0064D593FCFCDa195a2De32f4C335",
     "  forecaster(padv) 0x80519c53f10d731e4ff83a7d9acd69cf98da6258  resolver(ppub) 0x0b57877ec84d96b672cd47d8ea4424283fdb9f6c",
     "",
-    "padv predicted #0 (source shows it came true)",
-    "padv predicted #1 (source shows it did not)",
-    "padv predicted #2 (source is an injection page with no real outcome)",
-    "padv predicted #3 (source is unreadable)",
+    "committing future-dated predictions (deadline ~120s out)...",
+    "  committed #1 (will be graded true after the deadline)",
+    "  committed #2 (will be graded false after the deadline)",
+    "  committed #3 (source is an injection page)",
+    "  committed #4 (deadline a day out, for the premature-resolution test)",
     "",
-    "resolving #0 against a source that confirms it...",
+    "a past deadline is refused at predict time (no backdating a known outcome)...",
+    "  size 5 -> 5 (a past-dated prediction did not commit)",
+    "a duplicate claim from the same forecaster is refused...",
+    "  (predict Transaction reverted: EVM tx 0, wait 5s)",
+    "  size 5 -> 5 (the duplicate did not commit)",
+    "",
+    "resolving the far-deadline prediction before its deadline (should be refused)...",
+    "  #4 status PENDING resolutions 0 -> 0 (too early, refused)",
+    "",
+    "after the deadline, resolving against the committed sources...",
     "  (resolve Transaction reverted: EVM tx 0, wait 5s)",
-    "  true #0: RIGHT v=CAME_TRUE (45s)",
-    "  #0 RIGHT | The source reports that version 2.0 shipped on a specific date in March 2026, which falls within Q1 2026.",
-    "resolving #1 against a source that refutes it...",
+    "  true #1: RIGHT v=CAME_TRUE fp=7e07b0cb45f4d32f (75s)",
+    "  #1 RIGHT | The source reports Acme shipped version 2.0 on a specific date, which is before the deadline of 2026-10-13.",
     "  (resolve Transaction reverted: EVM tx 0, wait 5s)",
-    "  false #1: WRONG v=DID_NOT (60s)",
-    "  #1 WRONG | The source explicitly states that version 2.0 did not ship in Q1 2026 and has been delayed to the second half of 2026.",
-    "resolving #2 against the injection page (should NOT score right)...",
-    "  injection #2: not settled, resubmitting",
-    "  injection #2: PENDING v=UNCLEAR (30s)",
-    "  #2 PENDING v=UNCLEAR",
-    "resolving #3 against an unreadable source...",
-    "  unreadable #3: PENDING v=UNCLEAR (30s)",
+    "  false #2: WRONG v=DID_NOT fp=bd88eef99516aa5d (45s)",
+    "  #2 WRONG | The source says version 2.0 missed its first-quarter release and slipped to the second half of 2026, so the claim that it shipped on schedule with no slip is false.",
+    "  injection #3: PENDING v=UNCLEAR fp=39058c3cbeb0444e (360s)",
     "  #3 PENDING v=UNCLEAR",
     "",
-    "trying to re-grade the settled #0 (should be refused)...",
-    "  #0 resolutions 1 -> 1 (a settled prediction is not re-graded)",
+    "trying to re-grade the settled #1 (should be refused)...",
+    "  #1 resolutions 1 -> 1 (a settled prediction is not re-graded)",
     "",
     "forecaster record {\"exists\":false,\"address\":\"0x80519c53f10d731e4ff83a7d9acd69cf98da6258\",\"predictions\":0,\"right\":0,\"wrong\":0} -> {\"exists\":true,\"address\":\"0x80519c53f10d731e4ff83a7d9acd69cf98da6258\",\"predictions\":4,\"right\":1,\"wrong\":1}",
-    "book: {\"total\":4,\"right\":1,\"wrong\":1,\"pending\":2}",
+    "book: {\"total\":5,\"right\":1,\"wrong\":1,\"pending\":3}",
     "",
-    "  ok   the forecaster is the committer, not the resolver",
-    "  ok   the claim and source are the committed bytes",
-    "  ok   a source that confirms the claim scores it RIGHT",
-    "  ok   a source that refutes the claim scores it WRONG",
-    "  ok   a source that only instructs the round does NOT score the prediction right",
-    "  ok   an unreadable source scores nothing",
-    "  ok   the forecaster's record gains exactly one right and one wrong",
+    "  ok   a past-dated prediction is refused at predict (genuine future dating enforced)",
+    "  ok   a duplicate claim from the same forecaster is refused (no reputation farming)",
+    "  ok   resolve is refused before the deadline (no premature grading)",
+    "  ok   after the deadline, a confirming source scores it RIGHT",
+    "  ok   after the deadline, a refuting source scores it WRONG",
+    "  ok   an evidence fingerprint of the page read is recorded on a settled prediction",
+    "  ok   an injection source that only instructs scores nothing",
     "  ok   a settled prediction cannot be re-graded",
-    "  ok   the book shows one right and one wrong this run",
+    "  ok   the forecaster gains exactly one right and one wrong this run",
     "",
-    "9 checks. Only the named source scored a prediction, and an injection page could not."
+    "9 checks. Only genuine future predictions, graded after their deadline against the committed source, scored."
   ]
 }
